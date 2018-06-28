@@ -1,3 +1,5 @@
+ ssl_transport_security No match found for server name
+
 Simple Django poll application.
 
 Installation
