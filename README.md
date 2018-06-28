@@ -1,4 +1,31 @@
  ssl_transport_security No match found for server name
+ 
+ https://stackoverflow.com/questions/44815573/in-python-grpc-i-got-a-exception-no-match-found-for-server-name
+ I suspect that your server certificate does not have CN=localhost which you are trying to connect from your client. In that case, you need to either create your server certificate to include such Common Name, or from your client you need to connect to the name that exist in your certificate.
+
+
+ 
+https://github.com/grpc/grpc/blob/master/src/core/tsi/ssl_transport_security.cc
+static int ssl_server_handshaker_factory_servername_callback(SSL* ssl, int* ap,
+                                                             void* arg) {
+  tsi_ssl_server_handshaker_factory* impl =
+      static_cast<tsi_ssl_server_handshaker_factory*>(arg);
+  size_t i = 0;
+  const char* servername = SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name);
+  if (servername == nullptr || strlen(servername) == 0) {
+    return SSL_TLSEXT_ERR_NOACK;
+  }
+
+  for (i = 0; i < impl->ssl_context_count; i++) {
+    if (tsi_ssl_peer_matches_name(&impl->ssl_context_x509_subject_names[i],
+                                  servername)) {
+      SSL_set_SSL_CTX(ssl, impl->ssl_contexts[i]);
+      return SSL_TLSEXT_ERR_OK;
+    }
+  }
+  gpr_log(GPR_ERROR, "No match found for server name: %s.", servername);
+  return SSL_TLSEXT_ERR_ALERT_WARNING;
+
 
 Simple Django poll application.
 
